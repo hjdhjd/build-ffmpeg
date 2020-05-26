@@ -166,10 +166,8 @@ make install
 notifyuser ""
 notifyuser "Building pkg-config."
 
-# We can't specify where to install pkg-config. It defaults to /usr/local.
-#
 cd $BUILD/pkg-config
-./autogen.sh --with-internal-glib
+./autogen.sh --prefix="${TARGET}" --exec-prefix="${TARGET}" --with-internal-glib
 make install clean
 
 # Help pkg-config find the files it needs in our weird spot.
