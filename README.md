@@ -10,11 +10,12 @@ This script resides on top of the work of others. It effectively is a cleaned up
 
 ```sh
 ./build-ffmpeg.sh clean      # Cleanup old builds.
-./build-ffmpeg.sh            # Build or update a previous build with the latest from repos.
+./build-ffmpeg.sh build      # Build or update a previous build with the latest from repos.
 ./build-ffmpeg.sh install    # Install to your final system location.
 ```
 
 ### Notes
 * The script will prompt you for dependencies that aren't installed that are needed for this build script to succeed.
 * `clean` will delete the staging, build, and target install locations.
+* `build` will download and build x264, x265, and ffmpeg from their respective repositories.
 * `install` will install the build to a final location, defined in the script.
