@@ -23,6 +23,10 @@ FINALDIR=/usr/local
 #
 NOTIFYCOLOR='\033[1;33m'
 
+# Build dependencies - these packages are required to build ffmpeg.
+#
+PKGDEPS="curl git mercurial yasm nasm bash cmake gmake autoconf autotools fontconfig fribidi rsync opus libsoxr"
+
 # End of configuration options. Modify anything below as needed, but shouldn't be needed unless there are
 # major build changes.
 #
@@ -97,11 +101,11 @@ fi
 
 # Check for the packages that we expect to have in order to proceed with this build.
 #
-pkg info --quiet curl git mercurial yasm nasm bash cmake gmake autoconf autotools fontconfig fribidi rsync opus libsoxr
+pkg info --quiet ${PKGDEPS}
 
 if [ $? -ne 0 ]; then
   notifyuser "Not all the packages needed for this build script have been installed. Try again after executing the commmand:"
-  notifyuser "  pkg install curl git mercurial yasm nasm bash cmake gmake autoconf autotools fontconfig fribidi rsync opus libsoxr"
+  notifyuser "  pkg install ${PKGDEPS}"
   exit 1
 fi
 
