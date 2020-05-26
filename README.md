@@ -8,11 +8,11 @@ This script resides on top of the work of others. It effectively is a cleaned up
 
 ## Usage
 
-`
+```sh
 ./build-ffmpeg.sh clean      # Cleanup old builds.
 ./build-ffmpeg.sh            # Build or update a previous build with the latest from repos.
 ./build-ffmpeg.sh install    # Install to your final system location.
-`
+```
 
 ### Notes
 * The script will prompt you for dependencies that aren't installed that are needed for this build script to succeed.
