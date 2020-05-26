@@ -1,4 +1,10 @@
 #!/usr/local/bin/bash
+#
+# build-ffmpeg: Build FFmpeg from repos.
+# Author: HJD
+# License: MIT
+# Credits: Glorious1 (https://www.ixsystems.com/community/threads/how-to-install-ffmpeg-in-a-jail.39818/)
+#
 
 # Directories.
 #
@@ -11,6 +17,15 @@ PAKS=/usr/local/ffmpeg/packages
 BUILD=/usr/local/ffmpeg/build
 TARGET=/mnt/ffmpeg
 FINALDIR=/usr/local
+
+# Use colors to stand out when notifying the user.
+# Default color is yellow.
+#
+NOTIFYCOLOR='\033[1;33m'
+
+# End of configuration options. Modify anything below as needed, but shouldn't be needed unless there are
+# major build changes.
+#
 
 # These set clang as default compiler for most things.
 #
@@ -29,18 +44,13 @@ export PKG_CONFIG_PATH=/usr/local/lib:/usr/local/lib/pkgconfig:/usr/local/libdat
 #
 export PATH=$PATH:${TARGET}/bin
 
-# Use colors to stand out when notifying the user.
-# Default color is yellow.
-#
-NOTIFYCOLOR='\033[1;33m'
-
 # Usage.
 #
 function usage {
   echo "Usage:"
-  echo "$0 clean      # Cleanup old builds."
-  echo "$0 build      # Build or update a previous build with the latest from repos."
-  echo "$0 install    # Install to your final system location."
+  echo "    $0 clean      # Cleanup old builds."
+  echo "    $0 build      # Build or update a previous build with the latest from repos."
+  echo "    $0 install    # Install to your final system location."
 }
 
 # Notify user about what's going on.
