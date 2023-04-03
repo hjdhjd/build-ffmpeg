@@ -1,9 +1,10 @@
 #!/usr/local/bin/bash
 #
 # build-ffmpeg: Build FFmpeg from repos.
-# Author: HJD
+# Author: HJD. Copyright 2020-2023, all rights reserved.
 # License: MIT
 # Credits: Glorious1 (https://www.ixsystems.com/community/threads/how-to-install-ffmpeg-in-a-jail.39818/)
+# Version: v2.0
 #
 
 # Directories.
@@ -25,7 +26,7 @@ NOTIFYCOLOR='\033[1;33m'
 
 # Build dependencies - these packages are required to build ffmpeg.
 #
-PKGDEPS="curl git mercurial yasm nasm bash cmake gmake autoconf autotools fontconfig fribidi rsync opus libsoxr"
+PKGDEPS="curl git mercurial yasm nasm bash cmake gmake autoconf autotools fontconfig fribidi rsync opus libsoxr libxml2 speex libvorbis"
 
 # End of configuration options. Modify anything below as needed, but shouldn't be needed unless there are
 # major build changes.
@@ -35,6 +36,10 @@ PKGDEPS="curl git mercurial yasm nasm bash cmake gmake autoconf autotools fontco
 #
 export CC=/usr/bin/clang
 export CXX=/usr/bin/clang++
+
+# Optimize for the machine you're on.
+export CFLAGS="-march=native -static"
+export CXXFLAGS="-march=native -static"
 
 # This lets your system find the new man pages.
 #
@@ -128,27 +133,27 @@ cd $PAKS
 
 # Grab fdk-aac.
 #
-git -C fdk-aac pull 2> /dev/null || git clone --depth 1 https://github.com/mstorsjo/fdk-aac
+git clone --depth 1 https://github.com/mstorsjo/fdk-aac
 rsync -a --delete $PAKS/fdk-aac/ $BUILD/fdk-aac/
 
 # Grab pkg-config.
 #
-git -C pkg-config pull 2> /dev/null || git clone https://anongit.freedesktop.org/git/pkg-config
+git clone https://anongit.freedesktop.org/git/pkg-config
 rsync -a --delete $PAKS/pkg-config/ $BUILD/pkg-config/
 
 # Grab x264.
 #
-git -C x264 pull 2> /dev/null || git clone http://git.videolan.org/git/x264.git
+git clone http://git.videolan.org/git/x264.git
 rsync -a --delete $PAKS/x264/ $BUILD/x264/
 
 # Grab x265.
 #
-( [ -d x265 ] && hg pull --update x265 --repository x265 ) || hg clone http://hg.videolan.org/x265 x265
+hg clone http://hg.videolan.org/x265 x265
 rsync -a --delete $PAKS/x265/ $BUILD/x265/
 
 # Grab ffmpeg.
 #
-git -C ffmpeg pull 2> /dev/null || git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg
+git clone https://github.com/FFmpeg/FFmpeg.git ffmpeg
 rsync -a --delete $PAKS/ffmpeg/ $BUILD/ffmpeg/
 
 # Build fdk-aac.
@@ -165,12 +170,35 @@ autoreconf -fiv && \
 make && \
 make install
 
+# Patch pkg-config.
+#
+notifyuser "Patching pkg-config..."
+cd $BUILD/pkg-config/glib/m4macros
+patch -s -p0 <<EOF
+
+--- glib-gettext.m4.orig	2022-03-27 01:58:10.877703116 -0500
++++ glib-gettext.m4	2022-03-27 02:08:51.473425294 -0500
+@@ -36,8 +36,8 @@
+ dnl try to pull in the installed version of these macros
+ dnl when running aclocal in the glib directory.
+ dnl
+-m4_copy([AC_DEFUN],[glib_DEFUN])
+-m4_copy([AC_REQUIRE],[glib_REQUIRE])
++m4_copy_force([AC_DEFUN],[glib_DEFUN])
++m4_copy_force([AC_REQUIRE],[glib_REQUIRE])
+ dnl
+ dnl At the end, if we're not within glib, we'll define the public
+ dnl definitions in terms of our private definitions.
+
+EOF
+
 # Build pkg-config.
 #
 notifyuser ""
 notifyuser "Building pkg-config."
 
 cd $BUILD/pkg-config
+
 ./autogen.sh --prefix="${TARGET}" --exec-prefix="${TARGET}" --with-internal-glib
 make install clean
 
@@ -227,6 +255,26 @@ ${BASH} ./multilib_edited.sh
 cd 8bit
 make install
 
+# Patch FFmpeg.
+#
+notifyuser "Patching for RTSP..."
+cd $BUILD/ffmpeg/libavformat
+patch -s -p0 <<EOF
+
+--- rtsp.c.ori	2020-08-23 22:13:37.720963056 -0500
++++ rtsp.c	2020-08-23 22:33:31.623493026 -0500
+@@ -2373,7 +2373,7 @@
+             AVDictionary *opts = map_to_opts(rt);
+ 
+             err = getnameinfo((struct sockaddr*) &rtsp_st->sdp_ip,
+-                              sizeof(rtsp_st->sdp_ip),
++                              rtsp_st->sdp_ip.ss_len,
+                               namebuf, sizeof(namebuf), NULL, 0, NI_NUMERICHOST);
+             if (err) {
+                 av_log(s, AV_LOG_ERROR, "getnameinfo: %s\n", gai_strerror(err));
+
+EOF
+
 # Build FFmpeg.
 #
 notifyuser ""
@@ -234,18 +282,19 @@ notifyuser "Building ffmpeg."
 
 cd $BUILD/ffmpeg
 
-export CFLAGS="-I${TARGET}/include -I/usr/local/include -I/usr/include"
-export LDFLAGS="-L${TARGET}/lib -L/usr/local/lib -L/usr/lib"
+export CFLAGS="-march=native"
+export CFLAGS="${CFLAGS} -I${TARGET}/include -I/usr/local/include -I/usr/include"
+export LDFLAGS="-static -L${TARGET}/lib -L/usr/local/lib -L/usr/lib"
 
 export PKG_CONFIG_PATH=${TARGET}/lib:${TARGET}/lib/pkgconfig:${PKG_CONFIG_PATH}
 
 ./configure prefix=${TARGET} --cc=/usr/bin/clang \
---extra-cflags="-I${TARGET}/include" --extra-ldflags="-L${TARGET}/lib" \
---extra-libs=-lpthread \
---pkg-config-flags="--static" --enable-static --disable-shared \
---enable-libfdk-aac --enable-libx264 --enable-libx265 --enable-libfreetype --enable-libfontconfig --enable-libfribidi \
+--extra-cflags="-march=native -I${TARGET}/include -static" --extra-ldflags="-L${TARGET}/lib -static" \
+--extra-libs="-lpthread -lmd" \
+--pkg-config-flags="--static" --enable-static --enable-pic --disable-shared --disable-debug \
+--enable-libfdk-aac --enable-libvorbis --enable-libx264 --enable-libx265 \
 --enable-nonfree --enable-gpl --enable-version3 --enable-hardcoded-tables --enable-avfilter --enable-filters --disable-outdevs \
---enable-network --enable-gnutls --enable-libopus --enable-libsoxr
+--enable-network --enable-openssl --enable-libopus --enable-libspeex
 
 # Execute the build.
 #
