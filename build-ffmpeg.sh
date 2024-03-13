@@ -148,7 +148,7 @@ rsync -a --delete $PAKS/x264/ $BUILD/x264/
 
 # Grab x265.
 #
-hg clone http://hg.videolan.org/x265 x265
+git clone https://github.com/videolan/x265.git
 rsync -a --delete $PAKS/x265/ $BUILD/x265/
 
 # Grab ffmpeg.
