@@ -1,7 +1,7 @@
 #!/usr/local/bin/bash
 #
 # build-ffmpeg: Build FFmpeg from repos.
-# Author: HJD. Copyright 2020-2023, all rights reserved.
+# Author: HJD. Copyright 2020-2024, all rights reserved.
 # License: MIT
 # Credits: Glorious1 (https://www.ixsystems.com/community/threads/how-to-install-ffmpeg-in-a-jail.39818/)
 # Version: v2.0
