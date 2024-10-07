@@ -7,6 +7,12 @@
 # Version: v2.0
 #
 
+# FFmpeg version. Comment this out if you don't want to download a specific version of FFmpeg from ffmpeg.org, and prefer to use the HEAD branch from git.
+FFMPEG_VERSION=7.0.2
+
+# Extra version information, you may want to append to the FFmpeg version string.
+#FFMPEG_EXTRA_VERSION="homebridge-freebsd-x86_64-static"
+
 # Directories.
 #
 # PAKS     - location where source repositories will be downloaded.
@@ -52,6 +58,15 @@ export PKG_CONFIG_PATH=/usr/local/lib:/usr/local/lib/pkgconfig:/usr/local/libdat
 # Target bin path.
 #
 export PATH=$PATH:${TARGET}/bin
+
+# FFmpeg configuration options.
+#
+FFMPEG_CONFIGURE_OPTIONS=()
+
+if [ -n "${FFMPEG_EXTRA_VERSION}" ]; then
+
+  FFMPEG_CONFIGURE_OPTIONS+=("--extra-version=\"${FFMPEG_EXTRA_VERSION}\"")
+fi
 
 # Usage.
 #
@@ -148,12 +163,20 @@ rsync -a --delete $PAKS/x264/ $BUILD/x264/
 
 # Grab x265.
 #
-hg clone http://hg.videolan.org/x265 x265
+git clone https://bitbucket.org/multicoreware/x265_git.git x265
 rsync -a --delete $PAKS/x265/ $BUILD/x265/
 
-# Grab ffmpeg.
+# Grab FFmpeg.
 #
-git clone https://github.com/FFmpeg/FFmpeg.git ffmpeg
+if [ -n "${FFMPEG_VERSION}" ]; then
+  notifyuser "Downloading FFmpeg ${FFMPEG_VERSION}."
+  curl -sLO https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.gz
+  tar -xf ffmpeg-${FFMPEG_VERSION}.tar.gz
+  mv "ffmpeg-${FFMPEG_VERSION}" ffmpeg
+else
+  notifyuser "Downloading FFmpeg HEAD from the FFmpeg git repository."
+  git clone https://github.com/FFmpeg/FFmpeg.git ffmpeg
+fi
 rsync -a --delete $PAKS/ffmpeg/ $BUILD/ffmpeg/
 
 # Build fdk-aac.
@@ -288,12 +311,14 @@ export LDFLAGS="-static -L${TARGET}/lib -L/usr/local/lib -L/usr/lib"
 
 export PKG_CONFIG_PATH=${TARGET}/lib:${TARGET}/lib/pkgconfig:${PKG_CONFIG_PATH}
 
-./configure prefix=${TARGET} --cc=/usr/bin/clang \
+# shellcheck disable=SC2086
+./configure "${FFMPEG_CONFIGURE_OPTIONS[@]}" \
+--prefix=${TARGET} --cc=/usr/bin/clang \
 --extra-cflags="-march=native -I${TARGET}/include -static" --extra-ldflags="-L${TARGET}/lib -static" \
 --extra-libs="-lpthread -lmd" \
 --pkg-config-flags="--static" --enable-static --enable-pic --disable-shared --disable-debug \
 --enable-libfdk-aac --enable-libvorbis --enable-libx264 --enable-libx265 \
---enable-nonfree --enable-gpl --enable-version3 --enable-hardcoded-tables --enable-avfilter --enable-filters --disable-outdevs \
+--enable-nonfree --enable-gpl --enable-hardcoded-tables --enable-avfilter --enable-filters --disable-outdevs \
 --enable-network --enable-openssl --enable-libopus --enable-libspeex
 
 # Execute the build.
